@@ -1798,11 +1798,7 @@ fn truncate_run(
     if *width < desired_width {
         return;
     }
-    
-    // Make space for ellipsis
-    // Ellipsis is always width 1.
-    desired_width -= 1;
-    
+        
     let mut idx = 0;
     let mut max_width = 0;
     let mut line_width = 0;
@@ -1828,7 +1824,10 @@ fn truncate_run(
                 break;
             } else {
                 let char_width = usize::try_from(fish_wcwidth_visible(c)).unwrap_or(0);
-                if line_width + char_width > desired_width {
+
+                // Make space for ellipsis
+                // Ellipsis is always width 1.
+                if line_width + char_width + 1 > desired_width {
                     break;
                 }
                 line_width += char_width;
