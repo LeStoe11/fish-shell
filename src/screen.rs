@@ -1851,12 +1851,12 @@ fn truncate_run(
             }
         }
 
-        max_width = std:cmp:max(max_width, line_width);
+        max_width = std::cmp::max(max_width, line_width);
     }
 
     let ellipsis = get_ellipsis_char();
     run.insert(idx, ellipsis);
-    max_width = std:cmp:max(max_width, line_width + 1);
+    max_width = std::cmp::max(max_width, line_width + 1);
     
     *width = max_width;
 }
