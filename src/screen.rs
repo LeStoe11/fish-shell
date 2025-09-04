@@ -1827,7 +1827,7 @@ fn truncate_run(
             } else if c == '\n' {
                 break;
             } else {
-                next_char_width = usize::try_from(fish_wcwidth_visible(c)).unwrap_or(0);
+                let char_width = usize::try_from(fish_wcwidth_visible(c)).unwrap_or(0);
                 if line_width + char_width > desired_width {
                     break;
                 }
