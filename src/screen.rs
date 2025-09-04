@@ -1795,43 +1795,71 @@ fn truncate_run(
     width: &mut usize,
     cache: &mut LayoutCache,
 ) {
-    let mut curr_width = *width;
-    if curr_width < desired_width {
+    if *width < desired_width {
         return;
     }
-
-    // Bravely prepend ellipsis char and skip it.
+    
+    // Make space for ellipsis
     // Ellipsis is always width 1.
-    let ellipsis = get_ellipsis_char();
-    run.insert(0, ellipsis);
-    curr_width += 1;
+    desired_width -= 1;
+    
+    let mut idx = 0;
+    let mut max_width = 0;
+    let mut line_width = 0;
 
-    // Start removing characters after ellipsis.
-    // Note we modify 'run' inside this loop.
-    let mut idx = run.len() - 1;
-    while curr_width > desired_width && idx > 0 {
-        let c = run.as_char_slice()[idx];
-        assert!(
-            !is_run_terminator(c),
-            "Should not have run terminator inside run"
-        );
-        if c == '\x1B' {
-            let len = cache.escape_code_length(&run[idx..]);
-            idx -= std::cmp::max(len, 1);
-        } else if c == '\t' {
-            // Tabs would seem to be quite annoying to measure while truncating.
-            // We simply remove these and start over.
-            run.remove(idx);
-            curr_width = measure_run_from(run, 0, None, cache);
-            idx = curr_width - 1;
-        } else {
-            // FIXME: In case of backspace, this would remove the last width.
-            let char_width = usize::try_from(fish_wcwidth_visible(c)).unwrap_or(0);
-            curr_width -= std::cmp::min(curr_width, char_width);
-            run.remove(idx);
+    while idx < run.len() {
+        line_width = 0;
+        
+        while idx < run.len() {
+            let c = run.as_char_slice()[idx];
+            assert!(
+                !is_run_terminator(c),
+                "Should not have run terminator inside run"
+            );
+            
+            if c == '\x1B' {
+                let len = cache.escape_code_length(&run[idx..]);
+                idx += std::cmp::max(len, 1);
+            } else if c == '\t' {
+                // Tabs would seem to be quite annoying to measure while truncating.
+                // We simply remove these.
+                run.remove(idx);
+            } else if c == '\n' {
+                break;
+            } else {
+                next_char_width = usize::try_from(fish_wcwidth_visible(c)).unwrap_or(0);
+                if line_width + char_width > desired_width {
+                    break;
+                }
+                line_width += char_width;
+                idx += 1;
+            }
         }
+        while idx < run.len() {
+            let c = run.as_char_slice()[idx];
+            assert!(
+                !is_run_terminator(c),
+                "Should not have run terminator inside run"
+            );
+            if c == '\x1B' {
+                let len = cache.escape_code_length(&run[idx..]);
+                idx += std::cmp::max(len, 1);
+            } else if c == '\n' {
+                idx += 1;
+                break;
+            } else {
+                run.remove(idx);
+            }
+        }
+
+        max_width = std:cmp:max(max_width, line_width);
     }
-    *width = curr_width;
+
+    let ellipsis = get_ellipsis_char();
+    run.insert(idx, ellipsis);
+    max_width = std:cmp:max(max_width, line_width + 1);
+    
+    *width = max_width;
 }
 
 fn calc_prompt_lines(prompt: &wstr) -> usize {
