@@ -1808,8 +1808,8 @@ fn truncate_run(
 
     // Start removing characters after ellipsis.
     // Note we modify 'run' inside this loop.
-    let mut idx = 1;
-    while curr_width > desired_width && idx < run.len() {
+    let mut idx = run.len() - 1;
+    while curr_width > desired_width && idx > 0 {
         let c = run.as_char_slice()[idx];
         assert!(
             !is_run_terminator(c),
@@ -1817,13 +1817,13 @@ fn truncate_run(
         );
         if c == '\x1B' {
             let len = cache.escape_code_length(&run[idx..]);
-            idx += std::cmp::max(len, 1);
+            idx -= std::cmp::max(len, 1);
         } else if c == '\t' {
             // Tabs would seem to be quite annoying to measure while truncating.
             // We simply remove these and start over.
             run.remove(idx);
             curr_width = measure_run_from(run, 0, None, cache);
-            idx = 0;
+            idx = curr_width - 1;
         } else {
             // FIXME: In case of backspace, this would remove the last width.
             let char_width = usize::try_from(fish_wcwidth_visible(c)).unwrap_or(0);
